@@ -24,7 +24,7 @@ GO
 -- Exact address + ZIP match.
 IF EXISTS (
     SELECT 1
-    FROM [Mike].[situs_points] AS xy
+    FROM Mike.situs_points AS xy
     WHERE xy.full_address IS NOT NULL
         AND xy.zip IS NOT NULL
         AND xy.geom IS NOT NULL
@@ -36,7 +36,7 @@ BEGIN
             CAST('' AS nvarchar(35)) AS city,
             xy.zip,
             xy.geom AS expected_geom
-        FROM [Mike].[situs_points] AS xy
+        FROM Mike.situs_points AS xy
         WHERE xy.full_address IS NOT NULL
             AND xy.zip IS NOT NULL
             AND xy.geom IS NOT NULL
@@ -97,7 +97,7 @@ GO
         xy.reference_id,
         xy.x_coord,
         xy.y_coord
-    FROM [Mike].[situs_points] AS xy
+    FROM Mike.situs_points AS xy
     WHERE xy.full_address IS NOT NULL
         AND xy.zip IS NOT NULL
         AND xy.geom IS NOT NULL
@@ -116,12 +116,12 @@ neighboring_zip_sample AS (
         SELECT TOP 1
             zc.zipcode,
             zc.Shape.STDistance(cp.expected_geom) AS zip_distance
-        FROM [ElmerGeo].[dbo].[ZIP_CODES_H] AS zc
+        FROM ElmerGeo.dbo.zip_codes_evw AS zc
         WHERE zc.zipcode <> cp.situs_zip
             AND zc.Shape.STDistance(cp.expected_geom) < 18480
             AND NOT EXISTS (
                 SELECT 1
-                FROM [Mike].[situs_points] AS dup
+                FROM Mike.situs_points AS dup
                 WHERE dup.full_address = cp.street
                     AND dup.zip = zc.zipcode
             )
@@ -181,13 +181,13 @@ GO
 -- Alias lookup should resolve from alias_xy when no situs full_address equals the alias lookup string.
 IF EXISTS (
     SELECT 1
-    FROM [Mike].[alias_xy] AS a
+    FROM Mike.alias_xy AS a
     WHERE NULLIF(LTRIM(RTRIM(a.lookup)), '') IS NOT NULL
         AND a.x_coord IS NOT NULL
         AND a.y_coord IS NOT NULL
         AND NOT EXISTS (
             SELECT 1
-            FROM [Mike].[situs_points] AS xy
+            FROM Mike.situs_points AS xy
             WHERE xy.full_address = a.lookup
         )
 )
@@ -200,13 +200,13 @@ BEGIN
             geometry::STGeomFromText('POINT(' + CAST(a.x_coord AS varchar(20)) + ' ' + CAST(a.y_coord AS varchar(20)) + ')', 2285) AS expected_geom,
             a.lookup,
             a.fullname
-        FROM [Mike].[alias_xy] AS a
+        FROM Mike.alias_xy AS a
         WHERE NULLIF(LTRIM(RTRIM(a.lookup)), '') IS NOT NULL
             AND a.x_coord IS NOT NULL
             AND a.y_coord IS NOT NULL
             AND NOT EXISTS (
                 SELECT 1
-                FROM [Mike].[situs_points] AS xy
+                FROM Mike.situs_points AS xy
                 WHERE xy.full_address = a.lookup
             )
         ORDER BY LEN(a.lookup), a.lookup, a.fullname, a.x_coord, a.y_coord

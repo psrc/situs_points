@@ -13,7 +13,7 @@ GO
             PARTITION BY data_year, full_address, zip
             ORDER BY ref_id
         ) AS duplicate_rank
-    FROM [Mike].[situs_points]
+    FROM Mike.situs_points
     WHERE data_year IS NOT NULL
         AND full_address IS NOT NULL
         AND zip IS NOT NULL
@@ -30,10 +30,10 @@ IF NOT EXISTS (
 )
 BEGIN
     CREATE UNIQUE NONCLUSTERED INDEX [UX_situs_points_data_year_full_address_zip]
-        ON [Mike].[situs_points] ([data_year], [full_address], [zip])
-        WHERE [data_year] IS NOT NULL
-            AND [full_address] IS NOT NULL
-            AND [zip] IS NOT NULL;
+        ON Mike.situs_points (data_year, full_address, zip)
+        WHERE data_year IS NOT NULL
+            AND full_address IS NOT NULL
+            AND zip IS NOT NULL;
 END;
 GO
 
@@ -44,15 +44,15 @@ IF NOT EXISTS (
         AND object_id = OBJECT_ID(N'[Mike].[situs_points]')
 )
 BEGIN
-    CREATE NONCLUSTERED INDEX [IX_situs_points_full_address_zip_lookup]
-        ON [Mike].[situs_points] ([full_address], [zip])
-        INCLUDE ([geom], [data_year], [reference_id], [x_coord], [y_coord])
-        WHERE [full_address] IS NOT NULL
-            AND [zip] IS NOT NULL;
+    CREATE NONCLUSTERED INDEX IX_situs_points_full_address_zip_lookup
+        ON Mike.situs_points (full_address, zip)
+        INCLUDE (geom, data_year, reference_id, x_coord, y_coord)
+        WHERE full_address IS NOT NULL
+            AND zip IS NOT NULL;
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [Mike].[load_situs_points]
+CREATE OR ALTER PROCEDURE Mike.load_situs_points
     @data_year smallint
 AS
 BEGIN
@@ -72,7 +72,7 @@ BEGIN
             x_coord,
             y_coord,
             Shape
-        FROM [Mike].[situs33]
+        FROM Mike.situs33
         WHERE data_year = @data_year
 
         UNION ALL
@@ -89,7 +89,7 @@ BEGIN
             x_coord,
             y_coord,
             Shape
-        FROM [Mike].[situs35]
+        FROM Mike.situs35
         WHERE data_year = @data_year
 
         UNION ALL
@@ -106,7 +106,7 @@ BEGIN
             x_coord,
             y_coord,
             Shape
-        FROM [Mike].[situs53]
+        FROM Mike.situs53
         WHERE data_year = @data_year
 
         UNION ALL
@@ -123,7 +123,7 @@ BEGIN
             x_coord,
             y_coord,
             Shape
-        FROM [Mike].[situs61]
+        FROM Mike.situs61
         WHERE data_year = @data_year
     ),
     normalized_source AS (
@@ -169,17 +169,17 @@ BEGIN
         WHERE full_address IS NOT NULL
             AND zip IS NOT NULL
     )
-    INSERT INTO [Mike].[situs_points] (
-        [data_year],
-        [reference_id],
-        [situs_num],
-        [direction],
-        [full_address],
-        [zip],
-        [x_coord],
-        [y_coord],
-        [county_code],
-        [geom]
+    INSERT INTO Mike.situs_points (
+        data_year,
+        reference_id,
+        situs_num,
+        direction,
+        full_address,
+        zip,
+        x_coord,
+        y_coord,
+        county_code,
+        geom
     )
     SELECT
         source_rows.data_year,
@@ -196,7 +196,7 @@ BEGIN
     WHERE source_rows.source_rank = 1
         AND NOT EXISTS (
             SELECT 1
-            FROM [Mike].[situs_points] AS target_rows
+            FROM Mike.situs_points AS target_rows
             WHERE target_rows.data_year = source_rows.data_year
                 AND target_rows.full_address = source_rows.full_address
                 AND target_rows.zip = source_rows.zip
@@ -204,12 +204,12 @@ BEGIN
 
     UPDATE target_rows
     SET target_rows.county_code = TRY_CONVERT(tinyint, RIGHT(background.county_fip, 2))
-    FROM [Mike].[situs_points] AS target_rows
-    INNER JOIN [ElmerGeo].[dbo].[COUNTY_BACKGROUND] AS background
+    FROM Mike.situs_points AS target_rows
+    INNER JOIN ElmerGeo.dbo.county_background_evw AS background
         ON target_rows.geom.STIntersects(background.Shape) = 1
     WHERE target_rows.data_year = @data_year
         AND target_rows.county_code <> TRY_CONVERT(tinyint, RIGHT(background.county_fip, 2));
 END;
 GO
 
---EXECUTE [Mike].[load_situs_points] 2026;
+--EXECUTE Mike.load_situs_points 2026;
